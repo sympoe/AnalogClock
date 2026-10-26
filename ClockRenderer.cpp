@@ -230,7 +230,7 @@ void ClockRenderer::DrawDialInfo(
         g.DrawString(zoneLabel.c_str(), -1, &zoneFont, zoneBox, &sf, &zoneBrush);
     }
 
-    // 2. 日付表示（文字盤下部 または 3時位置の小窓）
+    // 2. 日付・曜日表示（文字盤下部 6時の上に見やすく大きく配置）
     if (settings.showDate) {
         static const wchar_t* const dayNames[] = {
             L"SUN", L"MON", L"TUE", L"WED", L"THU", L"FRI", L"SAT"
@@ -238,30 +238,66 @@ void ClockRenderer::DrawDialInfo(
         const wchar_t* wdayStr = (st.wDayOfWeek <= 6) ? dayNames[st.wDayOfWeek] : L"";
 
         std::wostringstream woss;
-        woss << st.wDay << L" " << wdayStr;
+        woss << st.wMonth << L"/" << st.wDay << L" " << wdayStr;
         std::wstring dateStr = woss.str();
 
-        float dateFontSize = radius * 0.08f;
-        if (dateFontSize < 7.0f) dateFontSize = 7.0f;
+        // 大きめのフォントサイズで設定（視認性を大幅向上）
+        float dateFontSize = radius * 0.12f;
+        if (dateFontSize < 10.0f) dateFontSize = 10.0f;
         Font dateFont(&fontFamily, dateFontSize, FontStyleBold, UnitPixel);
 
-        // 3時位置の内側に日付窓を配置
-        float boxW = radius * 0.36f;
-        float boxH = radius * 0.14f;
-        float boxX = cx + dialR * 0.22f;
-        float boxY = cy - boxH * 0.5f;
+        // 文字列サイズを計測してボックスを最適化
+        RectF layoutRect(0, 0, 1000.0f, 1000.0f);
+        RectF textBounds;
+        g.MeasureString(dateStr.c_str(), -1, &dateFont, layoutRect, &sf, &textBounds);
+
+        // 7と5のインデックスに干渉しない最大幅
+        float maxBoxW = radius * 0.65f;
+        float padX = radius * 0.05f;
+        float padY = radius * 0.03f;
+        float boxW = textBounds.Width + padX * 2.0f;
+
+        if (boxW > maxBoxW) {
+            // 文字列がはみ出さないようフォントを微調整
+            float scale = (maxBoxW - padX * 2.0f) / textBounds.Width;
+            dateFontSize *= scale;
+            if (dateFontSize < 9.0f) dateFontSize = 9.0f;
+            Font adjustedFont(&fontFamily, dateFontSize, FontStyleBold, UnitPixel);
+            g.MeasureString(dateStr.c_str(), -1, &adjustedFont, layoutRect, &sf, &textBounds);
+            boxW = textBounds.Width + padX * 2.0f;
+        }
+
+        float boxH = textBounds.Height + padY * 2.0f;
+
+        // 下側中央（デジタル時刻が表示されている場合はバランスを考慮して少し上）
+        float centerYPos = settings.showDigital ? (cy + dialR * 0.27f) : (cy + dialR * 0.38f);
+        float boxX = cx - boxW * 0.5f;
+        float boxY = centerYPos - boxH * 0.5f;
 
         RectF dateBox(boxX, boxY, boxW, boxH);
         SolidBrush boxBg(colors.dateBoxBg);
-        Pen boxBorder(colors.dateBoxBorder, 1.0f);
-        g.FillRectangle(&boxBg, dateBox);
-        g.DrawRectangle(&boxBorder, dateBox);
+        Pen boxBorder(colors.dateBoxBorder, 1.2f);
 
+        // スタイリッシュな角丸四角形プレート
+        float cornerR = boxH * 0.26f;
+        float dia = cornerR * 2.0f;
+        GraphicsPath datePath;
+        datePath.AddArc(boxX, boxY, dia, dia, 180, 90);
+        datePath.AddArc(boxX + boxW - dia, boxY, dia, dia, 270, 90);
+        datePath.AddArc(boxX + boxW - dia, boxY + boxH - dia, dia, dia, 0, 90);
+        datePath.AddArc(boxX, boxY + boxH - dia, dia, dia, 90, 90);
+        datePath.CloseFigure();
+
+        g.FillPath(&boxBg, &datePath);
+        g.DrawPath(&boxBorder, &datePath);
+
+        // 描画用のフォント
+        Font renderFont(&fontFamily, dateFontSize, FontStyleBold, UnitPixel);
         SolidBrush dateTextBrush(colors.numberText);
-        g.DrawString(dateStr.c_str(), -1, &dateFont, dateBox, &sf, &dateTextBrush);
+        g.DrawString(dateStr.c_str(), -1, &renderFont, dateBox, &sf, &dateTextBrush);
     }
 
-    // 3. デジタル時刻表示（設定されている場合、文字盤下部 6時位置の上）
+    // 3. デジタル時刻表示（設定されている場合、文字盤下部）
     if (settings.showDigital) {
         std::wostringstream woss;
         woss << std::setfill(L'0')
@@ -272,12 +308,13 @@ void ClockRenderer::DrawDialInfo(
         }
 
         std::wstring digiStr = woss.str();
-        float digiFontSize = radius * 0.09f;
-        if (digiFontSize < 7.0f) digiFontSize = 7.0f;
+        float digiFontSize = radius * 0.10f;
+        if (digiFontSize < 8.0f) digiFontSize = 8.0f;
         Font digiFont(&fontFamily, digiFontSize, FontStyleRegular, UnitPixel);
         SolidBrush digiBrush(colors.infoText);
 
-        RectF digiBox(cx - dialR * 0.4f, cy + dialR * 0.32f, dialR * 0.8f, digiFontSize * 1.6f);
+        float digiY = settings.showDate ? (cy + dialR * 0.48f) : (cy + dialR * 0.36f);
+        RectF digiBox(cx - dialR * 0.4f, digiY - digiFontSize * 0.8f, dialR * 0.8f, digiFontSize * 1.6f);
         g.DrawString(digiStr.c_str(), -1, &digiFont, digiBox, &sf, &digiBrush);
     }
 }
