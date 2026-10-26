@@ -1,0 +1,24 @@
+#include <windows.h>
+#include <commctrl.h>
+#include "resource.h"
+
+// アイコン
+IDI_APP_ICON ICON "app.ico"
+
+// タイムゾーン選択ダイアログ
+IDD_TIMEZONE_DIALOG DIALOGEX 0, 0, 320, 240
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "タイムゾーンの選択"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    CONTROL         "システムのタイムゾーンを使用する（自動追従）", IDC_USE_SYSTEM_TZ, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 10, 8, 220, 12
+    LTEXT           "検索:", IDC_STATIC, 10, 26, 20, 12
+    EDITTEXT        IDC_SEARCH_EDIT, 34, 24, 276, 14, ES_AUTOHSCROLL
+    LTEXT           "タイムゾーン一覧:", IDC_STATIC, 10, 42, 120, 10
+    LISTBOX         IDC_TZ_LIST, 10, 54, 300, 120, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    LTEXT           "現地時刻プレビュー: --", IDC_PREVIEW_TEXT, 10, 180, 300, 16, SS_LEFTNOWORDWRAP
+    DEFPUSHBUTTON   "OK", IDOK, 200, 214, 52, 16
+    PUSHBUTTON      "キャンセル", IDCANCEL, 258, 214, 52, 16
+END
+
+
